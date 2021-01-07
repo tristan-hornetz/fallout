@@ -14,21 +14,28 @@ int main() {
         return 1;
     }
     int page_size = getpagesize();
-    void* not_mapped = NULL + 1;
-    void* mapped = aligned_alloc(page_size, page_size);
+    void *not_mapped = NULL + 1;
+    void *mapped = aligned_alloc(page_size, page_size);
     uint8_t *mem = aligned_alloc(page_size, page_size * 256);
     memset(mem, 0xFF, page_size * 256);
     fallout_init();
-    printf("Demo 3: Data bounces\nuser_read1");
+    printf("Demo 3: Data bounces\n");
     char *loading = "-\\|/";
-    int success = 0;
-    for(int i = 0; i < REPS; i++){
-        if(i % 25 == 0) {printf("[%2.0f%%  %c]                \r", (i*100.0)/REPS, loading[(i / 25) % 4]);fflush(stdout);}
-        success += data_bounce(mem, mapped, 100) > data_bounce(mem, not_mapped, 100) * 2;
+    int true_positives = 0, false_positives = 0;
+    for (int i = 0; i < REPS; i++) {
+        if (i % 25 == 0) {
+            printf("[%2.0f%%  %c]                \r", (i * 100.0) / REPS, loading[(i / 25) % 4]);
+            fflush(stdout);
+        }
+        true_positives += data_bounce(mem, mapped, 200);
+        false_positives += data_bounce(mem, not_mapped, 200);
     }
     free(mem);
     fallout_cleanup();
-    printf("%d of %d data bounce tests succeeded.\nSuccess rate: %.2f %%\n", success, REPS, ((double) success * 100) / REPS);
+    printf("%d tests were performed.\n"\
+    "    * Rate of hits at a mapped address (true positives): %2.2f%%\n"\
+    "    * Rate of hits at an unmapped address (false positives): %2.2f%%\n",
+           REPS, ((double) true_positives * 100) / REPS, ((double) false_positives * 100) / REPS);
     return 0;
 }
 

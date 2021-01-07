@@ -324,10 +324,12 @@ int kernel_wtf(void *mem, int procfile) {
  * Init function, should be called before any other function from this file is used
  */
 int fallout_init() {
+#ifndef TSX_AVAILABLE
     if (signal(SIGSEGV, segfault_handler) == SIG_ERR) {
         printf("%s", "Failed to setup signal handler\n");
         return 0;
     }
+#endif
     page_size = getpagesize();
     wtf_times = malloc(sizeof(uint64_t) * 256);
     return 1;

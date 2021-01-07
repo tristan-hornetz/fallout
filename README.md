@@ -3,13 +3,13 @@
 This repository contains Proof-of-Concept exploits for vulnerabilities described in [**Fallout: Leaking Data on Meltdown-resistant CPUs**](https://mdsattacks.com/files/fallout.pdf) by Canella, Genkin, Giner, Gruss, Lipp, Minkin, Moghimi, Piessens, Schwarz, Sunar, Van Bulck and Yarom.
 For in-depth info about how these exploits work, please refer to the paper.
 
-All demos were tested on an Intel Core i7-8550U CPU with Debian and Linux Kernel 5.10.0. For some demos, KPTI had to be manually disabled. 
+All demos were tested on an Intel Core i7-8550U CPU with Debian and Linux Kernel 5.10.0.
 
 ## Setup
 
 To successfully run these exploits, an x86_64 or i386 capable Intel CPU and a fairly modern Linux-based OS are required.
 While VMs will likely work, the demos will not run on Windows or any other OS directly. For best results, restrict the execution to a single CPU
-core with _taskset_ or _numactl_. We also recommend use a CPU that is capable of Intel TSX, but this is not strictly required.  
+core with _taskset_ or _numactl_. We also recommend using a CPU that is capable of Intel TSX, but this is not strictly required.  
 
 You will need root permissions for some demos.
 
@@ -65,8 +65,6 @@ Data bounces are a means to determine if a virtual address is backed by a physic
 This demo checks if data bounces are possible on your system. If this is the case, the success rate should be close to 100%. 
 
 ## Demo #4: Breaking KASLR
-
-Note: This demo will only work if KPTI is not enabled on your system.
 
 ```shell
 taskset 0x1 ./demo_kaslr_noroot

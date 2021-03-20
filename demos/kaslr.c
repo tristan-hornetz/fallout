@@ -39,10 +39,6 @@ uint64_t get_kallsym(char *symbol) {
 }
 
 int main() {
-    if (!fallout_compatible()) {
-        printf("Your Processor Architecture is not supported by this demo!\n");
-        return 1;
-    }
     void *base_addr = (void *) get_kallsym("_text"), *addr = ADDRESS_RANGE_START - KPTI_MAPPED_PAGE_OFFSET;
     if (!base_addr) {
         printf("Could not open /proc/kallsyms! Make sure that you run this demo as root!\n");

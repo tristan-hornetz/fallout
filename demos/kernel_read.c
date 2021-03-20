@@ -10,10 +10,6 @@
 
 
 int main(int argc, char** args){
-    if(!fallout_compatible()){
-        printf("Your Processor Architecture is not supported by this demo!\n");
-        return 1;
-    }
     if(access(PROC_FILENAME, F_OK)){
         printf("The Fallout kernel module does not seem to be loaded. Make sure that you load 'kernel_module/fallout_module.ko' before running this demo!\n");
         return 1;

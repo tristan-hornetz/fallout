@@ -21,10 +21,6 @@
 
 
 int main() {
-    if (!fallout_compatible()) {
-        printf("Your Processor Architecture is not supported by this demo!\n");
-        return 1;
-    }
     void *addr = ADDRESS_RANGE_START - KPTI_MAPPED_PAGE_OFFSET;
     int page_size = getpagesize();
     uint8_t *mem = aligned_alloc(page_size, page_size * 256);

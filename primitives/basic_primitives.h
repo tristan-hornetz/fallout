@@ -2,7 +2,6 @@
 #define MELTDOWN_BASIC_PRIMITIVES_H
 
 #include <stdint.h>
-int fallout_compatible();
 int fallout_init();
 void fallout_cleanup();
 int toy_wtf(void* mem, int page_offset, int secret_value);

@@ -7,10 +7,6 @@
 #define REPS 20000
 
 int main(int argc, char** args){
-    if(!fallout_compatible()){
-        printf("Your Processor Architecture is not supported by this demo!\n");
-        return 1;
-    }
     printf("Demo 1: Write Transient Forwarding, version 1.\nNote: This demo is not breaking any access restrictions.\n");
     int page_size = getpagesize();
     uint8_t *mem = aligned_alloc(page_size,page_size * 256);

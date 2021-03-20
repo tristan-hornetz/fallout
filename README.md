@@ -1,4 +1,4 @@
-# Fallout Proof-of-Concept
+# Fallout (MSBDS) Proof-of-Concept
 
 This repository contains Proof-of-Concept exploits for vulnerabilities described in [**Fallout: Leaking Data on Meltdown-resistant CPUs**](https://mdsattacks.com/files/fallout.pdf) by Canella, Genkin, Giner, Gruss, Lipp, Minkin, Moghimi, Piessens, Schwarz, Sunar, Van Bulck and Yarom.
 For in-depth info about how these exploits work, please refer to the paper.
@@ -7,9 +7,9 @@ All demos were tested on an Intel Core i7-8550U CPU with Debian and Linux Kernel
 
 ## Setup
 
-To successfully run these exploits, an x86_64 or i386 capable Intel CPU and a fairly modern Linux-based OS are required.
+To successfully run these exploits, an x86_64 Intel CPU and a fairly modern Linux-based OS are required.
 While VMs will likely work, the demos will not run on Windows or any other OS directly. For best results, restrict the execution to a single CPU
-core with _taskset_ or _numactl_. We also recommend using a CPU that is capable of Intel TSX, but this is not strictly required.  
+core with _taskset_ or _numactl_. We also recommend using a CPU that supports Intel TSX, but this is not strictly required.  
 
 You will need root permissions for some demos.
 
@@ -23,33 +23,25 @@ Example for Debian and Ubuntu:
  ```
 **Build**
 
-Building is as simple a cloning the repository, entering its directory in the terminal and typing
+Building is as simple a cloning the repository and running
 ```shell
  make
  ```
-If your CPU supports Intel TSX, but you still want to run the demos without TSX support, you can build them with
+If your CPU supports Intel TSX, you can manually disable TSX support with 
 ```shell
  make notsx
  ```
-Note that running the demos without TSX support sometimes yields better results.
 
 ## Demo #1: Write Transient Forwarding
 
 ```shell
-taskset 0x1 ./demo_user_read1
- ```
-or 
-```shell
-taskset 0x1 ./demo_user_read2
+taskset 0x1 ./demo_user_read
  ```
 This demonstration contains a toylike example of Write Transient Forwarding (WTF),
 which is very similar to the example presented in Section 3 of the paper. It will attempt 
 to perform a number of reads from random page offsets. On a vulnerable system, the success 
 rate of those reads should be around 90%. A success rate of <1% indicates that your system is
 likely invulnerable in its current configuration.
-
-The difference between ```./demo_user_read1``` and ```./demo_user_read2```is that ```./demo_user_read1```
-observes writes to the memory heap, while ```./demo_user_read2``` observes writes to the memory stack. 
 
 ## Demo #2: Observing kernel writes
 
@@ -76,7 +68,7 @@ sudo taskset 0x1 ./demo_kaslr
 
 
 This demonstration uses data bounces to detect which kernel pages are mapped, effectively breaking KASLR.
-```sudo taskset 0x1 ./demo_kaslr``` additionally compares its findings with the correct base address, which is obtained from /proc/kallsyms.
+```sudo taskset 0x1 ./demo_kaslr``` additionally compares its findings with the correct base address, which is obtained from _/proc/kallsyms_.
 
 ## Acknowledgements
 

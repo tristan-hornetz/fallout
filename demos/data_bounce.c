@@ -9,10 +9,6 @@
 #define REPS 500
 
 int main() {
-    if (!fallout_compatible()) {
-        printf("Your Processor Architecture is not supported by this demo!\n");
-        return 1;
-    }
     int page_size = getpagesize();
     void *not_mapped = NULL + 1;
     void *mapped = aligned_alloc(page_size, page_size);
